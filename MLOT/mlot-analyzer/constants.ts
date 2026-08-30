@@ -45,8 +45,8 @@ The output must be a valid JSON object (no markdown formatting around it) with t
     "avgTransactionValue": "Average transaction value",
     "primaryProducts": "Main products or services"
   },
-  "executiveSummary": "A 2-3 sentence summary of the business health and main leakage points.",
-  "totalLeakage": number (The total estimated annual dollar amount lost),
+  "executiveSummary": "A 2-3 sentence summary of the business health and main leakage points. Do NOT state an overall or total leakage dollar figure in this text - the application appends the authoritative total automatically. If you cite a dollar amount, it must be clearly attributed to a specific named category, never presented as the overall total.",
+  "totalLeakage": number (The total estimated annual dollar amount lost. This MUST equal the exact arithmetic sum of every "estimatedLeakage" value in "leakageBreakdown"),
   "leakageBreakdown": [
     {
       "category": "Leadership Misalignment" | "Culture & Legacy Issues" | "Process Inefficiency" | "Sales & Marketing" | "Customer Retention" | "Collections",
@@ -75,6 +75,7 @@ The output must be a valid JSON object (no markdown formatting around it) with t
 }
 
 **GUIDELINES FOR ESTIMATION:**
+- **ARITHMETIC CONSISTENCY**: "totalLeakage" MUST be the exact sum of all "estimatedLeakage" values in "leakageBreakdown". Never describe a single category's leakage (including the Sales & Marketing figure) as if it were the overall total. The executive summary must not contain its own total figure.
 - **FULL POTENTIAL VALUATION**: Ensure assessed dollar amounts include ALL money left on the table based on *optimized* evaluations. Do not underestimate the value of best practices.
 - **CRITICAL RULE FOR SALES & MARKETING**: If the user indicates they are **missing a customer database (CRM)** OR **lack automated email follow-up campaigns** for past clients/leads, you MUST estimate the 'Sales & Marketing' leakage to be **AT LEAST 2X (200%) of their Annual Revenue**.
   - *Rationale*: Optimizing sales/marketing and tapping into past clients typically doubles job volume and income. 

@@ -38,6 +38,48 @@ export const sendMessageStream = async (message: string) => {
   return await chatSession.sendMessageStream({ message });
 };
 
+// Parse a value that should be a number but may arrive as "$6,400,000" etc.
+const toNumber = (value: unknown): number => {
+  if (typeof value === "number") return Number.isFinite(value) ? value : 0;
+  if (typeof value === "string") {
+    const parsed = parseFloat(value.replace(/[^0-9.-]/g, ""));
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+  return 0;
+};
+
+// Format a dollar amount identically to the dashboard / report views.
+const formatCurrency = (value: number): string =>
+  new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+// Force the report to be internally consistent so the dashboard, report modal,
+// and Word export all render the same figures:
+//  - each category's estimatedLeakage is coerced to a real number
+//  - totalLeakage becomes the exact sum of the category breakdown
+//  - the executive summary ends by citing that same authoritative total
+const reconcileAnalysis = (report: AnalysisResult): AnalysisResult => {
+  const breakdown = Array.isArray(report.leakageBreakdown) ? report.leakageBreakdown : [];
+  breakdown.forEach((category) => {
+    if (category) category.estimatedLeakage = toNumber(category.estimatedLeakage);
+  });
+
+  const summed = breakdown.reduce((total, category) => total + (category?.estimatedLeakage || 0), 0);
+  report.leakageBreakdown = breakdown;
+  report.totalLeakage = summed > 0 ? summed : toNumber(report.totalLeakage);
+
+  const totalText = formatCurrency(report.totalLeakage);
+  const summary = (report.executiveSummary || "").trim();
+  report.executiveSummary = summary
+    ? `${summary}${/[.!?]$/.test(summary) ? "" : "."} Across all categories, the total estimated annual leakage is ${totalText}.`
+    : `The total estimated annual leakage across all categories is ${totalText}.`;
+
+  return report;
+};
+
 // Generate the final JSON report
 export const generateAnalysisReport = async (chatHistory: Content[]): Promise<AnalysisResult> => {
   const client = getAI();
@@ -71,7 +113,8 @@ export const generateAnalysisReport = async (chatHistory: Content[]): Promise<An
 
   const jsonText = response.text || "{}";
   try {
-    return JSON.parse(jsonText) as AnalysisResult;
+    const parsed = JSON.parse(jsonText) as AnalysisResult;
+    return reconcileAnalysis(parsed);
   } catch (e) {
     console.error("Failed to parse JSON report", e);
     throw new Error("Analysis generation failed");
