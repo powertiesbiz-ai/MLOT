@@ -3,6 +3,7 @@ import { DeSoIdentityContext } from 'react-deso-protocol';
 import { ChatInterface } from './components/ChatInterface';
 import { Dashboard } from './components/Dashboard';
 import { DeSoAuth } from './components/DeSoAuth';
+import { SupportButton } from './components/SupportButton';
 import { AnalysisResult } from './types';
 import { Activity, DollarSign, ChevronRight, FileText } from 'lucide-react';
 
@@ -107,6 +108,9 @@ export default function App() {
       <footer className="bg-slate-950 py-6 border-t border-slate-900 text-center text-slate-500 text-sm no-print">
         <p>&copy; {new Date().getFullYear()} MLOT Analyzer. Powered by Gemini.</p>
       </footer>
+
+      {/* Persistent across every screen; owns its own state, never touches the flow. */}
+      <SupportButton raised={currentState === AppState.DIAGNOSTIC} />
     </div>
   );
 }
