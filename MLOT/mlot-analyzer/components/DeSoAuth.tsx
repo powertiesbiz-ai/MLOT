@@ -46,12 +46,19 @@ export const DeSoAuth: React.FC = () => {
   }
 
   return (
-    <button
-      onClick={() => identity.login()}
-      className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium py-2.5 px-5 rounded-xl border border-slate-700 transition-colors"
-    >
-      <LogIn className="w-4 h-4" />
-      Log in with DeSo
-    </button>
+    <div className="flex flex-col items-center gap-2">
+      <button
+        onClick={() => identity.login()}
+        className="inline-flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-100 font-medium py-2.5 px-5 rounded-xl border border-slate-700 transition-colors"
+      >
+        <LogIn className="w-4 h-4" />
+        Log in with DeSo
+      </button>
+      <p className="max-w-sm text-xs text-slate-500 leading-relaxed text-center">
+        Already have a DeSo account? On the identity screen, use the smaller
+        &ldquo;Log in&rdquo; link &mdash; don&rsquo;t enter a seed phrase or
+        pick &ldquo;create new&rdquo; if you&rsquo;re returning.
+      </p>
+    </div>
   );
 };

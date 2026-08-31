@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
+import { DeSoIdentityContext } from 'react-deso-protocol';
 import { ChatInterface } from './components/ChatInterface';
 import { Dashboard } from './components/Dashboard';
 import { DeSoAuth } from './components/DeSoAuth';
@@ -16,7 +17,11 @@ export default function App() {
   const [currentState, setCurrentState] = useState<AppState>(AppState.INTRO);
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
 
+  // The diagnostic is gated behind a DeSo login.
+  const { currentUser } = useContext(DeSoIdentityContext);
+
   const handleStartDiagnostic = () => {
+    if (!currentUser) return;
     setCurrentState(AppState.DIAGNOSTIC);
   };
 
@@ -57,14 +62,18 @@ export default function App() {
                 Our AI consultant will guide you through a deep-dive diagnostic to uncover lost revenue and provide actionable solutions.
               </p>
               
-              <div className="pt-4 flex flex-col items-center gap-5">
+              <div className="pt-4 flex flex-col items-center gap-4">
                 <button
                   onClick={handleStartDiagnostic}
-                  className="group relative inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-4 px-8 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5"
+                  disabled={!currentUser}
+                  className="group relative inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-4 px-8 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-500 disabled:hover:shadow-lg disabled:hover:translate-y-0"
                 >
                   Start Diagnostic Analysis
                   <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
+                {!currentUser && (
+                  <p className="text-sm text-slate-400">Log in with DeSo to begin.</p>
+                )}
                 <DeSoAuth />
               </div>
 
