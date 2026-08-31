@@ -99,10 +99,17 @@ export const chatErrorMessage = (err: unknown): string => {
   }
 };
 
+// Gemini key: Vite exposes GEMINI_API_KEY from .env.local on import.meta.env
+// (see envPrefix in vite.config). The process.env fallback keeps older
+// build setups / AI Studio working.
+const getApiKey = (): string | undefined =>
+  import.meta.env.GEMINI_API_KEY ??
+  (typeof process !== "undefined" ? process.env?.API_KEY : undefined);
+
 // Initialize the AI client
 const getAI = (): GoogleGenAI => {
   if (!ai) {
-    const apiKey = process.env.API_KEY;
+    const apiKey = getApiKey();
     if (!apiKey) {
       throw new ChatError("missing-key", "API key is not configured.");
     }

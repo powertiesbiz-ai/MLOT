@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ChatInterface } from './components/ChatInterface';
 import { Dashboard } from './components/Dashboard';
+import { DeSoAuth } from './components/DeSoAuth';
 import { AnalysisResult } from './types';
 import { Activity, DollarSign, ChevronRight, FileText } from 'lucide-react';
 
@@ -56,14 +57,15 @@ export default function App() {
                 Our AI consultant will guide you through a deep-dive diagnostic to uncover lost revenue and provide actionable solutions.
               </p>
               
-              <div className="pt-4">
-                <button 
+              <div className="pt-4 flex flex-col items-center gap-5">
+                <button
                   onClick={handleStartDiagnostic}
                   className="group relative inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-4 px-8 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5"
                 >
                   Start Diagnostic Analysis
                   <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
+                <DeSoAuth />
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-12 text-left text-sm text-slate-400">

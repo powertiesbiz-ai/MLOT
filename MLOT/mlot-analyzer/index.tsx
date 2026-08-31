@@ -1,5 +1,7 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import { DeSoIdentityProvider } from 'react-deso-protocol';
+import './services/desoConfig'; // side effect: configure() once, before identity is used
 import App from './App';
 
 const rootElement = document.getElementById('root');
@@ -10,6 +12,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <App />
+    <DeSoIdentityProvider>
+      <App />
+    </DeSoIdentityProvider>
   </React.StrictMode>
 );
