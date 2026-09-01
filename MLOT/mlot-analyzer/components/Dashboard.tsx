@@ -235,14 +235,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
             </p>
             <div className="mt-6">
               <h4 className="text-sm font-uppercase tracking-wider text-slate-500 mb-3">TOP PRIORITIES</h4>
-              <div className="flex flex-wrap gap-2">
+              <ol className="space-y-2">
                 {data.topPriorities?.map((priority, idx) => (
-                  <span key={idx} className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-red-500/10 text-red-400 border border-red-500/20 text-sm font-medium">
-                    <AlertTriangle className="w-3 h-3" />
-                    {priority}
-                  </span>
+                  <li key={idx} className="flex items-start gap-2 px-3 py-2 rounded-lg bg-red-500/10 text-red-300 border border-red-500/20 text-sm leading-relaxed">
+                    <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0 text-red-400" />
+                    <span>{priority}</span>
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
           </div>
 
@@ -430,14 +430,24 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                 <p style={{ fontSize: '11pt', lineHeight: '1.5', color: '#000000', textAlign: 'justify', marginBottom: '20px', backgroundColor: '#ffffff' }}>{data.executiveSummary}</p>
                 
                 <div style={{ border: '1px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
-                   <span style={{ fontSize: '10pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '8px', backgroundColor: '#ffffff' }}>Top Strategic Priorities:</span>
-                   <div style={{ backgroundColor: '#ffffff' }}>
-                     {data.topPriorities?.map((p, i) => (
-                       <span key={i} style={{ display: 'inline-block', backgroundColor: '#ffffff', color: '#000000', border: '1px solid #000000', padding: '4px 12px', fontSize: '9pt', marginRight: '8px', marginBottom: '5px' }}>
-                         {p}
-                       </span>
-                     ))}
-                   </div>
+                   <span style={{ fontSize: '10pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '10px', backgroundColor: '#ffffff' }}>Top Strategic Priorities:</span>
+                   {data.topPriorities?.map((p, i, arr) => (
+                     <div
+                       key={i}
+                       style={{
+                         display: 'block',
+                         backgroundColor: '#ffffff',
+                         color: '#000000',
+                         border: '1px solid #000000',
+                         padding: '8px 12px',
+                         fontSize: '10pt',
+                         lineHeight: 1.4,
+                         marginBottom: i === arr.length - 1 ? 0 : '8px',
+                       }}
+                     >
+                       {i + 1}. {p}
+                     </div>
+                   ))}
                 </div>
               </div>
 
