@@ -316,6 +316,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                    <div>
                      <div className="font-medium text-slate-200">{item.category}</div>
                      <div className="text-sm text-slate-400 mt-1">{item.description}</div>
+                     {item.evidence && (
+                       <div className="text-xs text-slate-500 mt-1.5">
+                         <span className="font-semibold uppercase tracking-wide text-slate-400">From the interview: </span>
+                         {item.evidence}
+                       </div>
+                     )}
                    </div>
                    <div className="text-right flex-shrink-0 ml-4">
                      <div className="text-red-400 font-bold">{formatCurrency(item.estimatedLeakage)}</div>
@@ -513,6 +519,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                         <td style={{ padding: '8px', fontWeight: 'bold', color: '#000000', verticalAlign: 'top', borderRight: '1px solid #000000', fontSize: '10pt', backgroundColor: '#ffffff' }}>{item.category}</td>
                         <td style={{ padding: '8px', color: '#000000', fontSize: '10pt', verticalAlign: 'top', borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}>
                           <div style={{ marginBottom: '6px', backgroundColor: '#ffffff' }}>{item.description}</div>
+                          {item.evidence && (
+                            <div style={{ marginBottom: '6px', fontSize: '9pt', fontStyle: 'italic', backgroundColor: '#ffffff' }}>
+                              <span style={{ fontWeight: 'bold', fontStyle: 'normal', textTransform: 'uppercase', backgroundColor: '#ffffff' }}>From the interview: </span>
+                              {item.evidence}
+                            </div>
+                          )}
                           {/* Visual Bar - Black */}
                           <div style={{ width: '100%', height: '6px', border: '1px solid #000000', display: 'flex', backgroundColor: '#ffffff' }}>
                              <div style={{ width: `${Math.max((item.estimatedLeakage / maxLeakage) * 100, 1)}%`, backgroundColor: '#000000', height: '100%' }}></div>

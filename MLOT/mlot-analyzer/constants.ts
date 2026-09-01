@@ -51,7 +51,8 @@ The output must be a valid JSON object (no markdown formatting around it) with t
     {
       "category": "Leadership Misalignment" | "Culture & Legacy Issues" | "Process Inefficiency" | "Sales & Marketing" | "Customer Retention" | "Collections",
       "estimatedLeakage": number,
-      "description": "Short explanation of why money is lost here based on user input.",
+      "description": "Why money is lost here, INCLUDING the arithmetic that produces the number (e.g. 'current revenue $X, an optimized operation would run at ~$Y, so ~$Z is left on the table').",
+      "evidence": "Quote or closely paraphrase the SPECIFIC interview answers that justify this figure - the actual behavioural gaps (weak percentages, admitted problems, blind spots). If the only thing you can point to is the absence of a tool or document, this figure MUST be small.",
       "priority": "High" | "Medium" | "Low"
     }
     ... for all categories
@@ -75,14 +76,29 @@ The output must be a valid JSON object (no markdown formatting around it) with t
 }
 
 **GUIDELINES FOR ESTIMATION:**
-- **ARITHMETIC CONSISTENCY**: "totalLeakage" MUST be the exact sum of all "estimatedLeakage" values in "leakageBreakdown". Never describe a single category's leakage (including the Sales & Marketing figure) as if it were the overall total. The executive summary must not contain its own total figure.
-- **FULL POTENTIAL VALUATION**: Ensure assessed dollar amounts include ALL money left on the table based on *optimized* evaluations. Do not underestimate the value of best practices.
-- **CRITICAL RULE FOR SALES & MARKETING**: If the user indicates they are **missing a customer database (CRM)** OR **lack automated email follow-up campaigns** for past clients/leads, you MUST estimate the 'Sales & Marketing' leakage to be **AT LEAST 2X (200%) of their Annual Revenue**.
-  - *Rationale*: Optimizing sales/marketing and tapping into past clients typically doubles job volume and income. 
-  - Explicitly mention this massive upside potential in the description.
-- **BLIND SPOTS**: If the transcript shows the user failed to answer a question or the topic was skipped due to lack of knowledge after 3 attempts, interpret this as a **Blind Spot**.
-  1. Assign a higher probability of financial leakage to that category.
-  2. **MANDATORY**: You MUST generate specific **Recommendations** in the appropriate section to fix this exact blind spot (e.g., if they didn't know their Retention Rate, the recommendation must be "Implement Customer Tracking & CRM" to close the visibility gap).
+- **ARITHMETIC CONSISTENCY**: "totalLeakage" MUST be the exact sum of all "estimatedLeakage" values in "leakageBreakdown". Never describe a single category's leakage as if it were the overall total. The executive summary must not contain its own total figure. Sanity-check the total against revenue: a total far above ~150-200% of annual revenue is only credible if the interview shows several severe, compounding constraints - otherwise revisit the individual figures.
+- **OUTCOME-BASED SIZING (applies to EVERY category)**: The size of a category's leakage is driven by the SEVERITY of the behavioural gaps the interview actually revealed - NEVER by the presence or absence of a named tool, software, or document on its own. For each category:
+  1. Find the specific interview answers that show a real gap (weak numbers, admitted problems, blind spots) and put them in "evidence".
+  2. Size the dollar figure to those answers, and show the arithmetic in "description".
+  3. If you cannot point to a concrete behavioural gap, the figure must be SMALL and the priority Low. "They don't use [CRM / automation / SOPs]" is NOT, by itself, evidence of leakage.
+- **A MISSING TOOL IS NOT A TRIGGER**: Missing a CRM, missing marketing automation, or missing written SOPs does not by itself justify a large number. Judge the OUTCOMES those tools would improve. For Sales & Marketing, weigh together: follow-up completion rate, close / conversion rate, referral & partner activity, lead volume vs. capacity, digital presence, and outbound activity.
+  - Strong follow-up + strong close/conversion rate + an active referral engine + lead flow that already meets or exceeds capacity -> Sales & Marketing leakage is SMALL (roughly 5-15% of revenue). The upside is efficiency and scale, not recovered lost deals. A business like this with no CRM belongs HERE.
+  - Weak follow-up (e.g. under ~25% of quotes chased) OR a low / declining close rate OR no proactive outreach OR lead flow well below capacity -> MODERATE (roughly 20-60% of revenue).
+  - Several of those failing together (little follow-up, low close rate, no outreach, a constrained or dormant pipeline) -> LARGE, and it CAN reach 100-200%+ of revenue, because fixing the whole system roughly doubles pipeline throughput.
+- **CAPACITY-DOUBLING CONSTRAINTS**: When the interview CLEARLY shows one of the following is real and severe, that single constraint - fixed within 12 months - can roughly DOUBLE revenue. Size the relevant category near 100% of current annual revenue and show the math (current revenue $X -> optimised ~$2X -> ~$X left on the table):
+  - No real operating systems, everything ad hoc, heavy manual load with frequent rework or repeated mistakes -> Process Inefficiency.
+  - The owner is the bottleneck - working IN the business not ON it, personally approving most decisions, no delegation, no KPIs / accountability -> Leadership Misalignment.
+  - The business cannot hire or keep good people - high turnover, chronic understaffing, weak bench -> Culture & Legacy Issues.
+  - No systematic demand generation sitting on a large dormant customer base with proven referral pull -> Sales & Marketing.
+  If TWO constraints each imply a doubling, attribute the doubling ONCE to the primary constraint and give the secondary a supporting but smaller figure, so "totalLeakage" stays credible relative to revenue. If NONE of these is genuinely present, do NOT inflate any category to 100% of revenue.
+- **DON'T LOWBALL REAL GAPS**: Where the interview does show a genuine severe constraint, size it boldly per the rules above and back it with arithmetic. Aim for an honest number - neither a reflexive 200% nor a timid lowball.
+- **PER-CATEGORY SIGNALS** (base each figure on the ACTUAL answers, not tool presence):
+  - Leadership Misalignment: goal clarity, decision speed, owner working in vs. on the business, delegation, KPIs / accountability.
+  - Culture & Legacy Issues: core values in practice, conflict frequency, resistance to change, employee turnover and ability to hire/keep good people.
+  - Process Inefficiency: hours lost to manual work, rework / second trips / repeated errors, bottlenecks, turnaround speed. A business with no written SOPs that still runs smoothly (low rework, fast turnaround, low manual hours) scores LOW here.
+  - Customer Retention: churn rate, churn reasons, quality consistency, proactive outreach - scale the figure to the actual churn % and the value of the customers lost.
+  - Collections: dollars actually trapped in overdue AR, % past due, invoicing delay and error rate - scale to the real cost of that delay, not a flat percentage.
+- **BLIND SPOTS**: If the transcript shows the user could not answer a question after 3 attempts, treat it as a Blind Spot: raise that category's priority (not automatically its dollar figure), note the visibility gap in "evidence", and generate a specific Recommendation to close it (e.g. missing Retention Rate -> "Implement Customer Tracking & CRM").
 - Include "BIAB" (Business In A Box) solutions from the "Guild of Honour" in recommendations where relevant.
 - For "businessSnapshot", extract the data provided by the user in the first section. If specific numbers weren't given, use "Not specified" or estimates based on context.
 `;

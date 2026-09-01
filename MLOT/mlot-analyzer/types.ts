@@ -9,6 +9,8 @@ export interface LeakageCategory {
   category: string;
   estimatedLeakage: number;
   description: string;
+  /** The specific interview answers that justify this figure (populated by the analysis prompt). */
+  evidence?: string;
   priority: 'High' | 'Medium' | 'Low';
 }
 
