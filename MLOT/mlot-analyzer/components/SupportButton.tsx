@@ -13,6 +13,9 @@ const ASK_COPY =
 
 const PRESETS = [0.1, 0.5, 1];
 const NANOS_PER_DESO = 1e9;
+// Padding on the permission request so the transfer's network fee doesn't tip
+// the granted GlobalDESOLimit over and force a second identity prompt.
+const FEE_BUFFER_NANOS = 100_000; // 0.0001 DESO
 
 type Status = 'idle' | 'sending' | 'success' | 'error';
 
@@ -64,17 +67,20 @@ export const SupportButton: React.FC<SupportButtonProps> = ({ raised = false }) 
     setMessage('Processing your contribution (approve any DeSo prompt)...');
 
     try {
-      // Ask for transfer permission up front if it isn't granted yet, so the
-      // user sees the approval popup before the amount prompt. sendDeso also
-      // guards this internally, but doing it here keeps the UX predictable.
+      // Ask for transfer permission up front if this contribution exceeds the
+      // derived key's current budget (it always will - the login-setup budget
+      // in desoConfig.ts is 0.001 DESO, far below any preset). sendDeso still
+      // guards internally as a safety net; the fee buffer keeps that from
+      // firing a second prompt.
+      const requiredLimit = amountNanos + FEE_BUFFER_NANOS;
       const hasPerm = await identity.hasPermissions({
         TransactionCountLimitMap: { BASIC_TRANSFER: 1 },
-        GlobalDESOLimit: amountNanos,
+        GlobalDESOLimit: requiredLimit,
       });
       if (!hasPerm) {
         await identity.requestPermissions({
           TransactionCountLimitMap: { BASIC_TRANSFER: 1 },
-          GlobalDESOLimit: amountNanos,
+          GlobalDESOLimit: requiredLimit,
         });
       }
 
