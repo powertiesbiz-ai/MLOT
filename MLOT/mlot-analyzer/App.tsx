@@ -80,7 +80,7 @@ export default function App() {
                 {!isLoggedIn && (
                   <p className="text-sm text-slate-400">Log in with DeSo or Google to begin.</p>
                 )}
-                <div className="flex flex-col sm:flex-row items-center gap-4">
+                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
                   <GoogleAuth />
                   <DeSoAuth />
                 </div>
