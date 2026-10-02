@@ -19,18 +19,17 @@ const FEE_BUFFER_NANOS = 100_000; // 0.0001 DESO
 
 type Status = 'idle' | 'sending' | 'success' | 'error';
 
-interface SupportButtonProps {
-  /** Sit higher so the pill clears the chat's bottom input bar. */
-  raised?: boolean;
-}
-
 /**
- * Persistent, unobtrusive "Support this app" pill. Rendered once at the App
+ * Persistent, unobtrusive "Support this app" trigger. Rendered once at the App
  * root (outside the screen switch) so it stays put across intro -> chat ->
  * report. It owns all of its own state - opening, closing, or failing to
  * send never touches the diagnostic flow.
+ *
+ * Collapsed it is just a small circle peeking from the right edge of the
+ * screen (never covering the chat input or send button); tapping it expands
+ * the donation panel.
  */
-export const SupportButton: React.FC<SupportButtonProps> = ({ raised = false }) => {
+export const SupportButton: React.FC = () => {
   const { currentUser } = useContext(DeSoIdentityContext);
 
   const [open, setOpen] = useState(false);
@@ -107,13 +106,9 @@ export const SupportButton: React.FC<SupportButtonProps> = ({ raised = false }) 
   const sending = status === 'sending';
 
   return (
-    <div
-      className={`fixed right-4 z-40 no-print flex flex-col items-end gap-2 ${
-        raised ? 'bottom-28 sm:bottom-24' : 'bottom-4 sm:bottom-6'
-      }`}
-    >
+    <>
       {open && (
-        <div className="w-[19rem] max-w-[calc(100vw-2rem)] rounded-2xl border border-slate-700 bg-slate-900/95 backdrop-blur-sm shadow-2xl p-4 text-left animate-fade-in">
+        <div className="fixed right-16 top-1/2 -translate-y-1/2 z-40 no-print w-[19rem] max-w-[calc(100vw-6rem)] rounded-2xl border border-slate-700 bg-slate-900/95 backdrop-blur-sm shadow-2xl p-4 text-left animate-fade-in">
           <div className="flex items-start justify-between gap-2 mb-2">
             <h3 className="text-sm font-bold text-white flex items-center gap-1.5">
               <Heart className="w-4 h-4 text-yellow-400" />
@@ -203,13 +198,18 @@ export const SupportButton: React.FC<SupportButtonProps> = ({ raised = false }) 
         </div>
       )}
 
+      {/* Collapsed edge tab: a small circle half-docked on the right edge.
+          It never covers the chat input or send button; tapping expands the
+          donation panel. Slides out slightly on hover to hint it's tappable. */}
       <button
         onClick={() => (open ? close() : (reset(), setOpen(true)))}
-        className="inline-flex items-center gap-2 bg-slate-800/90 hover:bg-slate-700 text-slate-100 text-sm font-medium py-2 px-4 rounded-full border border-slate-700 shadow-lg backdrop-blur-sm transition-colors"
+        aria-label={open ? 'Close support panel' : 'Support this app'}
+        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 no-print w-12 h-12 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 shadow-lg backdrop-blur-sm transition-transform translate-x-1/2 hover:translate-x-[30%] flex items-center justify-center"
       >
-        <span aria-hidden>💛</span>
-        {open ? 'Close' : 'Support this app'}
+        <span aria-hidden className="text-xl -ml-3">
+          {open ? '✕' : '💛'}
+        </span>
       </button>
-    </div>
+    </>
   );
 };
