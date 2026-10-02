@@ -80,9 +80,18 @@ export default function App() {
                 {!isLoggedIn && (
                   <p className="text-sm text-slate-400">Log in with DeSo or Google to begin.</p>
                 )}
-                <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">
-                  <GoogleAuth />
-                  <DeSoAuth />
+                <div className="flex flex-col items-center gap-3">
+                  <div className="flex flex-col sm:flex-row items-center gap-4">
+                    <GoogleAuth />
+                    <DeSoAuth showHelp={false} />
+                  </div>
+                  {!currentUser && (
+                    <p className="max-w-sm text-xs text-slate-500 leading-relaxed text-center">
+                      Already have a DeSo account? On the identity screen, use the smaller
+                      &ldquo;Log in&rdquo; link &mdash; don&rsquo;t enter a seed phrase or
+                      pick &ldquo;create new&rdquo; if you&rsquo;re returning.
+                    </p>
+                  )}
                 </div>
               </div>
 
