@@ -109,7 +109,7 @@ export const SupportButton: React.FC<SupportButtonProps> = ({ raised = false }) 
   return (
     <div
       className={`fixed right-4 z-40 no-print flex flex-col items-end gap-2 ${
-        raised ? 'bottom-24' : 'bottom-4 sm:bottom-6'
+        raised ? 'bottom-28 sm:bottom-24' : 'bottom-4 sm:bottom-6'
       }`}
     >
       {open && (
