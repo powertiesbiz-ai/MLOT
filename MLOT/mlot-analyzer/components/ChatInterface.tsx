@@ -213,7 +213,7 @@ export const ChatInterface: React.FC<ChatInterfaceProps> = ({ onAnalysisComplete
                 : 'Type your answer here...'
             }
             disabled={inputDisabled}
-            className="w-full bg-slate-800 text-white placeholder-slate-400 border border-slate-700 rounded-xl pl-4 pr-14 py-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            className="w-full bg-slate-800 text-white placeholder-slate-400 border border-slate-700 rounded-xl pl-4 pr-20 py-4 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
           />
           <button
             onClick={handleSend}
