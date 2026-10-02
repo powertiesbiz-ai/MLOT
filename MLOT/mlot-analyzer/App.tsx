@@ -110,7 +110,7 @@ export default function App() {
       </footer>
 
       {/* Persistent across every screen; owns its own state, never touches the flow. */}
-      <SupportButton raised={currentState === AppState.DIAGNOSTIC} />
+      <SupportButton />
     </div>
   );
 }
