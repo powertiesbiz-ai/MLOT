@@ -3,7 +3,9 @@ import { DeSoIdentityContext } from 'react-deso-protocol';
 import { ChatInterface } from './components/ChatInterface';
 import { Dashboard } from './components/Dashboard';
 import { DeSoAuth } from './components/DeSoAuth';
+import { GoogleAuth } from './components/GoogleAuth';
 import { SupportButton } from './components/SupportButton';
+import { useGoogleUser } from './services/googleAuth';
 import { AnalysisResult } from './types';
 import { Activity, DollarSign, ChevronRight, FileText } from 'lucide-react';
 
@@ -18,11 +20,14 @@ export default function App() {
   const [currentState, setCurrentState] = useState<AppState>(AppState.INTRO);
   const [analysisData, setAnalysisData] = useState<AnalysisResult | null>(null);
 
-  // The diagnostic is gated behind a DeSo login.
+  // The diagnostic is gated behind a login: DeSo or Google (either one works).
+  // Donations remain DeSo-only - the support widget explains that itself.
   const { currentUser } = useContext(DeSoIdentityContext);
+  const googleUser = useGoogleUser();
+  const isLoggedIn = Boolean(currentUser || googleUser);
 
   const handleStartDiagnostic = () => {
-    if (!currentUser) return;
+    if (!isLoggedIn) return;
     setCurrentState(AppState.DIAGNOSTIC);
   };
 
@@ -66,16 +71,19 @@ export default function App() {
               <div className="pt-4 flex flex-col items-center gap-4">
                 <button
                   onClick={handleStartDiagnostic}
-                  disabled={!currentUser}
+                  disabled={!isLoggedIn}
                   className="group relative inline-flex items-center gap-3 bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-4 px-8 rounded-xl transition-all duration-200 shadow-lg shadow-emerald-900/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-emerald-500 disabled:hover:shadow-lg disabled:hover:translate-y-0"
                 >
                   Start Diagnostic Analysis
                   <ChevronRight className="w-5 h-5 transition-transform group-hover:translate-x-1" />
                 </button>
-                {!currentUser && (
-                  <p className="text-sm text-slate-400">Log in with DeSo to begin.</p>
+                {!isLoggedIn && (
+                  <p className="text-sm text-slate-400">Log in with DeSo or Google to begin.</p>
                 )}
-                <DeSoAuth />
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <GoogleAuth />
+                  <DeSoAuth />
+                </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-12 text-left text-sm text-slate-400">
