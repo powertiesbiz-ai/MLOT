@@ -13,7 +13,7 @@ const getDisplayName = (user: User): string =>
  * identity.deso.org popup, and the DeSoIdentityProvider re-renders this with
  * `currentUser` populated. No transactions, no permission requests.
  */
-export const DeSoAuth: React.FC = () => {
+export const DeSoAuth: React.FC<{ showHelp?: boolean }> = ({ showHelp = true }) => {
   const { currentUser, isLoading } = useContext(DeSoIdentityContext);
 
   if (isLoading) {
@@ -54,11 +54,13 @@ export const DeSoAuth: React.FC = () => {
         <LogIn className="w-4 h-4" />
         Log in with DeSo
       </button>
-      <p className="max-w-sm text-xs text-slate-500 leading-relaxed text-center">
-        Already have a DeSo account? On the identity screen, use the smaller
-        &ldquo;Log in&rdquo; link &mdash; don&rsquo;t enter a seed phrase or
-        pick &ldquo;create new&rdquo; if you&rsquo;re returning.
-      </p>
+      {showHelp && (
+        <p className="max-w-sm text-xs text-slate-500 leading-relaxed text-center">
+          Already have a DeSo account? On the identity screen, use the smaller
+          &ldquo;Log in&rdquo; link &mdash; don&rsquo;t enter a seed phrase or
+          pick &ldquo;create new&rdquo; if you&rsquo;re returning.
+        </p>
+      )}
     </div>
   );
 };
