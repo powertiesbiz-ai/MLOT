@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { AnalysisResult, LeakageCategory, Recommendation, BusinessSnapshot, LeadScoringAnalysis } from '../types';
 import { LeakageChart } from './LeakageChart';
-import { RefreshCw, AlertTriangle, Users, Briefcase, DollarSign, ShoppingCart, Activity, Target, Cpu, Zap, Loader2, MessageSquare, FileText, X, FileEdit } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Users, Briefcase, DollarSign, ShoppingCart, Activity, Target, Cpu, Zap, Loader2, MessageSquare, FileText, X, FileEdit, Printer } from 'lucide-react';
 
 interface DashboardProps {
   data: AnalysisResult;
@@ -390,6 +390,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                    <span className="text-lg font-bold hidden sm:inline">Report Preview</span>
                 </div>
                 <div className="flex gap-3">
+                   <button 
+                     onClick={() => window.print()}
+                     className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-2 rounded-lg transition-colors font-medium shadow-lg shadow-emerald-900/20"
+                   >
+                     <Printer className="w-4 h-4" />
+                     Print Report
+                   </button>
                    <button 
                      onClick={handleDownloadWord}
                      disabled={isDownloading}
