@@ -2,7 +2,7 @@ import { GoogleGenAI, Chat, Content } from "@google/genai";
 import { MLOT_SYSTEM_INSTRUCTION, ANALYSIS_GENERATION_PROMPT } from "../constants";
 import { AnalysisResult } from "../types";
 
-const MODEL_ID = "gemini-flash-latest";
+const MODEL_ID = "gemini-2.5-flash";
 
 let ai: GoogleGenAI | null = null;
 let chatSession: Chat | null = null;
