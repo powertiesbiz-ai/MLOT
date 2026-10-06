@@ -19,7 +19,7 @@ interface VercelRes {
 
 import { GoogleGenAI } from "@google/genai";
 
-const MODEL_ID = "gemini-2.5-flash";
+const MODEL_ID = "gemini-3.8-flash";
 
 export default async function handler(req: VercelReq, res: VercelRes) {
   if (req.method !== "POST") {
