@@ -1,11 +1,18 @@
-import { GoogleGenAI, Chat, Content } from "@google/genai";
-import { MLOT_SYSTEM_INSTRUCTION, ANALYSIS_GENERATION_PROMPT } from "../constants";
+import type { Content } from "@google/genai";
+import {
+  MLOT_SYSTEM_INSTRUCTION,
+  ANALYSIS_GENERATION_PROMPT,
+  INITIAL_GREETING,
+} from "../constants";
 import { AnalysisResult } from "../types";
 
-const MODEL_ID = "gemini-2.5-flash";
-
-let ai: GoogleGenAI | null = null;
-let chatSession: Chat | null = null;
+/**
+ * The Gemini API key is NOT in this bundle. All model calls go through the
+ * server-side proxy routes (/api/mlot-chat, /api/mlot-report), which read
+ * GEMINI_API_KEY from the server environment at runtime — the same pattern
+ * Warrior 25 uses. The client keeps the conversation history and sends it
+ * with each request because the server is stateless.
+ */
 
 /**
  * The distinct failure modes the UI needs to tell apart. Everything the service
@@ -29,8 +36,8 @@ export class ChatError extends Error {
   }
 }
 
-// Best-effort classification of an arbitrary thrown value (SDK errors, fetch
-// failures, nested Google API error bodies) into a ChatErrorKind.
+// Best-effort classification of an arbitrary thrown value (server errors,
+// fetch failures, nested Google API error bodies) into a ChatErrorKind.
 const classify = (err: unknown): ChatErrorKind => {
   if (err instanceof ChatError) return err.kind;
 
@@ -99,59 +106,108 @@ export const chatErrorMessage = (err: unknown): string => {
   }
 };
 
-// Gemini key: Vite exposes GEMINI_API_KEY from .env.local on import.meta.env
-// (see envPrefix in vite.config). The process.env fallback keeps older
-// build setups / AI Studio working.
-const getApiKey = (): string | undefined =>
-  import.meta.env.GEMINI_API_KEY ??
-  (typeof process !== "undefined" ? process.env?.API_KEY : undefined);
+// Conversation history sent with each request (the server is stateless).
+let serverHistory: Content[] = [];
 
-// Initialize the AI client
-const getAI = (): GoogleGenAI => {
-  if (!ai) {
-    const apiKey = getApiKey();
-    if (!apiKey) {
-      throw new ChatError("missing-key", "API key is not configured.");
-    }
-    try {
-      ai = new GoogleGenAI({ apiKey });
-    } catch (e) {
-      throw new ChatError("init", "Failed to initialize the AI client.", e);
-    }
-  }
-  return ai;
-};
-
-// Start a new diagnostic chat session
-export const startDiagnosticChat = async (): Promise<Chat> => {
+// Start a new diagnostic chat session. Verifies the server route is up and
+// the API key is configured before the UI shows the greeting.
+export const startDiagnosticChat = async (): Promise<void> => {
+  serverHistory = [{ role: "model", parts: [{ text: INITIAL_GREETING }] }];
+  let health: { ok?: boolean; keyConfigured?: boolean } = {};
   try {
-    const client = getAI();
-    chatSession = client.chats.create({
-      model: MODEL_ID,
-      config: {
-        systemInstruction: MLOT_SYSTEM_INSTRUCTION,
-        temperature: 0.7,
-      },
-    });
-    return chatSession;
+    const res = await fetch("/api/mlot-chat", { method: "GET" });
+    health = (await res.json()) as typeof health;
   } catch (e) {
-    if (e instanceof ChatError) throw e;
     throw new ChatError("init", "Failed to start the diagnostic session.", e);
   }
+  if (!health.keyConfigured) {
+    throw new ChatError(
+      "missing-key",
+      "API key is not configured on the server."
+    );
+  }
 };
 
-// Send a message and get a stream
-export const sendMessageStream = async (message: string) => {
-  if (!chatSession) {
-    throw new ChatError("not-initialized", "Chat session is not initialized.");
-  }
+// Send a message and stream the reply. Yields { text } chunks so the UI's
+// existing `for await (const chunk of stream)` loop keeps working unchanged.
+export async function* sendMessageStream(
+  message: string
+): AsyncGenerator<{ text: string }> {
+  let res: Response;
   try {
-    return await chatSession.sendMessageStream({ message });
+    res = await fetch("/api/mlot-chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        systemInstruction: MLOT_SYSTEM_INSTRUCTION,
+        history: serverHistory,
+        message,
+      }),
+    });
+  } catch (e) {
+    throw new ChatError("network", "Failed to send message.", e);
+  }
+
+  if (!res.ok) {
+    let kind: ChatErrorKind = "unknown";
+    try {
+      const data = await res.json();
+      kind = classify((data as any)?.error ?? `HTTP ${res.status}`);
+    } catch {
+      /* keep unknown */
+    }
+    throw new ChatError(kind, `Failed to send message (HTTP ${res.status}).`);
+  }
+  if (!res.body) {
+    throw new ChatError(
+      "network",
+      "Failed to send message: empty response body."
+    );
+  }
+
+  const reader = res.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let fullResponse = "";
+  let streamDone = false;
+  try {
+    while (!streamDone) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+      const events = buffer.split("\n\n");
+      buffer = events.pop() ?? "";
+      for (const event of events) {
+        const line = event.trim();
+        if (!line.startsWith("data:")) continue;
+        let data: any;
+        try {
+          data = JSON.parse(line.slice(5).trim());
+        } catch {
+          continue;
+        }
+        if (data.error)
+          throw new ChatError(classify(data.error), "Failed to send message.");
+        if (typeof data.text === "string" && data.text) {
+          fullResponse += data.text;
+          yield { text: data.text };
+        }
+        if (data.done) {
+          streamDone = true;
+          break;
+        }
+      }
+    }
   } catch (e) {
     if (e instanceof ChatError) throw e;
     throw new ChatError(classify(e), "Failed to send message.", e);
+  } finally {
+    reader.releaseLock();
   }
-};
+
+  serverHistory.push({ role: "user", parts: [{ text: message }] });
+  serverHistory.push({ role: "model", parts: [{ text: fullResponse }] });
+}
 
 // Parse a value that should be a number but may arrive as "$6,400,000" etc.
 const toNumber = (value: unknown): number => {
@@ -195,16 +251,8 @@ const reconcileAnalysis = (report: AnalysisResult): AnalysisResult => {
   return report;
 };
 
-// Generate the final JSON report
+// Generate the final JSON report via the server-side proxy.
 export const generateAnalysisReport = async (chatHistory: Content[]): Promise<AnalysisResult> => {
-  const client = getAI();
-  
-  // We construct a prompt that includes the history (or we could use the chat session, but a fresh generation call with context is often cleaner for strict JSON)
-  // However, using the existing chat session is better to keep the "mindset" of the model.
-  // But to force JSON, we might want to just pass the history as context to a new call or use the chat.
-  
-  // Let's use a new generation call to ensure clean JSON output without conversation artifacts.
-  // We serialize the history into a transcript.
   const transcript = chatHistory.map(msg => {
     const role = msg.role === 'user' ? 'User' : 'MLOT Analyzer';
     const text = msg.parts[0].text;
@@ -220,14 +268,23 @@ export const generateAnalysisReport = async (chatHistory: Content[]): Promise<An
 
   let jsonText: string;
   try {
-    const response = await client.models.generateContent({
-      model: MODEL_ID,
-      contents: finalPrompt,
-      config: {
-        responseMimeType: "application/json",
-      }
+    const res = await fetch("/api/mlot-report", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt: finalPrompt }),
     });
-    jsonText = response.text || "{}";
+    if (!res.ok) {
+      let kind: ChatErrorKind = "unknown";
+      try {
+        const data = await res.json();
+        kind = classify((data as any)?.error ?? `HTTP ${res.status}`);
+      } catch {
+        /* keep unknown */
+      }
+      throw new ChatError(kind, "Failed to generate the analysis report.");
+    }
+    const data = (await res.json()) as { text?: string };
+    jsonText = data.text || "{}";
   } catch (e) {
     if (e instanceof ChatError) throw e;
     throw new ChatError(classify(e), "Failed to generate the analysis report.", e);
