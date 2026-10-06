@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableCell, TableRow, WidthType } from 'docx';
 import { AnalysisResult, LeakageCategory, Recommendation, BusinessSnapshot, LeadScoringAnalysis } from '../types';
 import { LeakageChart } from './LeakageChart';
 import { RefreshCw, AlertTriangle, Users, Briefcase, DollarSign, ShoppingCart, Activity, Target, Cpu, Zap, Loader2, MessageSquare, FileText, X, FileEdit, Printer } from 'lucide-react';
@@ -11,154 +12,124 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [printOnOpen, setPrintOnOpen] = useState(false);
 
-  const handleDownloadWord = () => {
+  const handleDownloadDocx = async () => {
     setIsDownloading(true);
-    
+
     try {
-      const element = document.getElementById('printable-report-content');
-      if (!element) {
-        throw new Error("Report content not found");
+      const cleanName = (data.businessName || 'MLOT_Report').replace(/[^a-z0-9]/gi, '_');
+      const dateStr = new Date().toLocaleDateString();
+
+      type Align = typeof AlignmentType[keyof typeof AlignmentType];
+      const P = (text: string, opts: { bold?: boolean; size?: number; italic?: boolean; alignment?: Align; spacingAfter?: number } = {}) =>
+        new Paragraph({
+          alignment: opts.alignment,
+          spacing: { after: opts.spacingAfter ?? 160 },
+          children: [new TextRun({ text, bold: opts.bold, italics: opts.italic, size: opts.size ? opts.size * 2 : undefined })],
+        });
+
+      const H = (text: string) =>
+        new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 320, after: 160 }, children: [new TextRun({ text, bold: true })] });
+
+      const children: (Paragraph | Table)[] = [];
+
+      // Cover
+      children.push(new Paragraph({ heading: HeadingLevel.TITLE, alignment: AlignmentType.CENTER, spacing: { after: 160 }, children: [new TextRun({ text: "MLOT ANALYZER REPORT", bold: true })] }));
+      children.push(P(data.businessName || "Your Business", { bold: true, size: 14, alignment: AlignmentType.CENTER }));
+      children.push(P(`Generated on ${dateStr}`, { italic: true, size: 10, alignment: AlignmentType.CENTER, spacingAfter: 320 }));
+
+      // Executive summary
+      children.push(H("Executive Summary"));
+      children.push(P(data.executiveSummary || "", { spacingAfter: 240 }));
+      children.push(P("Top Strategic Priorities:", { bold: true, spacingAfter: 120 }));
+      (data.topPriorities || []).forEach((pr, i) => children.push(P(`${i + 1}. ${pr}`, { spacingAfter: 80 })));
+
+      // Total leakage callout
+      children.push(H("Total Annual Leakage Identified"));
+      children.push(P(formatCurrency(data.totalLeakage), { bold: true, size: 28, alignment: AlignmentType.CENTER }));
+      children.push(P("Money currently left on the table", { alignment: AlignmentType.CENTER, spacingAfter: 320 }));
+
+      // Business snapshot
+      if (data.businessSnapshot) {
+        const s = data.businessSnapshot;
+        children.push(H("Business Snapshot"));
+        const cell = (label: string, value: string) =>
+          new TableCell({ children: [P(label, { bold: true, size: 9, spacingAfter: 40 }), P(value || "N/A", { spacingAfter: 0 })] });
+        children.push(new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            new TableRow({ children: [cell("Revenue", s.annualRevenue), cell("Employees", s.employeeCount), cell("Type", s.businessType)] }),
+            new TableRow({ children: [cell("Customers/Mo", s.customersPerMonth), cell("Avg Transaction", s.avgTransactionValue), cell("Key Offerings", s.primaryProducts)] }),
+          ],
+        }));
       }
 
-      const content = element.innerHTML;
-
-      // simplified HTML wrapper for better Word compatibility
-      const preHtml = `<!DOCTYPE html>
-        <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-        <head>
-          <meta charset='utf-8'>
-          <title>MLOT Analysis Report</title>
-          <style>
-            /* Page Setup */
-            @page {
-              size: 8.5in 11in; 
-              margin: 1.0in 1.0in 1.0in 1.0in;
-              mso-page-orientation: portrait;
-            }
-            @page WordSection1 {
-              size: 8.5in 11in; 
-              margin: 1.0in 1.0in 1.0in 1.0in;
-              mso-header-margin: 0.5in;
-              mso-footer-margin: 0.5in;
-            }
-            div.WordSection1 { page: WordSection1; }
-
-            /* Minimalist Typography - Black and White Only */
-            body { 
-              font-family: 'Arial', sans-serif; 
-              font-size: 11pt; 
-              line-height: 1.4; 
-              color: #000000; 
-              background-color: #ffffff; 
-            }
-            
-            /* Clean Headings */
-            h1 { 
-              font-size: 24pt; 
-              font-weight: bold; 
-              color: #000000; 
-              margin-bottom: 24pt; 
-              text-align: center; 
-              text-transform: uppercase;
-              letter-spacing: 2px;
-            }
-            h2 { 
-              font-size: 14pt; 
-              font-weight: bold; 
-              color: #000000; 
-              margin-top: 24pt; 
-              margin-bottom: 12pt; 
-              border-bottom: 1px solid #000000; 
-              padding-bottom: 4pt;
-              text-transform: uppercase;
-              letter-spacing: 1px;
-            }
-            h3 { 
-              font-size: 12pt; 
-              font-weight: bold; 
-              color: #000000; 
-              margin-top: 12pt; 
-              margin-bottom: 6pt; 
-            }
-            
-            /* Text & Paragraphs */
-            p { 
-              margin-bottom: 10pt; 
-              text-align: left; 
-              color: #000000; 
-            }
-            ul { 
-              margin-top: 0; 
-              margin-bottom: 10pt; 
-              padding-left: 20pt; 
-            }
-            li { 
-              margin-bottom: 4pt; 
-            }
-            
-            /* Tables - Strict Borders, No Backgrounds */
-            table { 
-              width: 100%; 
-              border-collapse: collapse; 
-              margin-bottom: 18pt; 
-            }
-            th { 
-              text-align: left; 
-              border-bottom: 1px solid #000000; 
-              border-top: 1px solid #000000;
-              padding: 6pt 4pt; 
-              font-weight: bold; 
-              color: #000000; 
-              font-size: 10pt;
-              text-transform: uppercase;
-              background-color: transparent; /* No background */
-            }
-            td { 
-              padding: 6pt 4pt; 
-              vertical-align: top; 
-              color: #000000; 
-              border-bottom: 1px solid #cccccc; /* lighter inner borders */
-            }
-            tr:last-child td {
-              border-bottom: 1px solid #000000; /* strong bottom border */
-            }
-            
-            /* Utility & Specifics */
-            .text-center { text-align: center; }
-            .text-right { text-align: right; }
-            .font-bold { font-weight: bold; }
-            
-            /* Enforce Strict Black/White */
-            * { color: #000000 !important; background-color: transparent !important; }
-            
-          </style>
-        </head>
-        <body>
-          <div class="WordSection1">
-      `;
-
-      const postHtml = `
-          </div>
-        </body>
-        </html>
-      `;
-
-      const fullHtml = preHtml + content + postHtml;
-
-      const blob = new Blob(['\ufeff', fullHtml], {
-        type: 'application/msword'
+      // Leakage breakdown
+      children.push(H("Financial Leakage Breakdown"));
+      const headerRow = new TableRow({ children: ["Category", "Analysis", "Est. Loss"].map(t =>
+        new TableCell({ children: [P(t, { bold: true, size: 10, spacingAfter: 0 })] })) });
+      const leakRows = (data.leakageBreakdown || []).map(item => {
+        const analysis = item.evidence ? `${item.description}\nFrom the interview: ${item.evidence}` : item.description;
+        return new TableRow({ children: [
+          new TableCell({ children: [P(item.category, { bold: true, size: 10, spacingAfter: 0 })] }),
+          new TableCell({ children: [P(analysis, { size: 10, spacingAfter: 0 })] }),
+          new TableCell({ children: [P(formatCurrency(item.estimatedLeakage), { bold: true, size: 10, spacingAfter: 0 })] }),
+        ]});
       });
-      
+      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...leakRows] }));
+
+      // Lead scoring
+      if (data.leadScoringAnalysis) {
+        const ls = data.leadScoringAnalysis;
+        children.push(H("AI Lead Scoring Plan"));
+        children.push(P("Recommended Model:", { bold: true, spacingAfter: 40 }));
+        children.push(P(ls.recommendedModel, { spacingAfter: 160 }));
+        children.push(P("Key Signals:", { bold: true, spacingAfter: 40 }));
+        (ls.keySignals || []).forEach(sig => children.push(P(`\u2022 ${sig}`, { spacingAfter: 40 })));
+        children.push(P(`Potential uplift: ${ls.potentialConversionIncrease} conversion rate`, { bold: true, spacingAfter: 240 }));
+      }
+
+      // Recommendations
+      children.push(H("Strategic Action Plan"));
+      const sections: [string, Recommendation[]][] = [
+        ["Leadership & Culture", data.recommendations?.leadership || []],
+        ["Process Optimization", data.recommendations?.process || []],
+        ["Sales & Marketing", data.recommendations?.marketing || []],
+        ["Revenue Recovery", data.recommendations?.collections || []],
+      ];
+      sections.forEach(([title, items]) => {
+        if (!items.length) return;
+        children.push(P(title, { bold: true, size: 12, spacingAfter: 80 }));
+        items.forEach(rec => {
+          children.push(P(`${rec.title} [${rec.type}]`, { bold: true, size: 10, spacingAfter: 40 }));
+          children.push(P(rec.description, { size: 10, spacingAfter: 160 }));
+        });
+      });
+
+      // Transcript
+      if (data.transcript && data.transcript.length > 0) {
+        children.push(H("Diagnostic Transcript"));
+        data.transcript.forEach(item => {
+          children.push(P(`Q: ${item.question}`, { bold: true, size: 10, spacingAfter: 40 }));
+          children.push(P(item.answer, { size: 10, spacingAfter: 160 }));
+        });
+      }
+
+      // Contact + footer
+      children.push(P("Questions about this report or want to discuss your results?", { bold: true, alignment: AlignmentType.CENTER, spacingAfter: 40 }));
+      children.push(P("Contact Keith Tully \u2014 PowerTies.us \u2014 keith@powerties.us \u2014 646.598.2834", { alignment: AlignmentType.CENTER, size: 10, spacingAfter: 320 }));
+      children.push(P("End of Report \u2022 Generated by MLOT Analyzer", { alignment: AlignmentType.CENTER, size: 8, spacingAfter: 0 }));
+
+      const doc = new Document({ sections: [{ children }] });
+      const blob = await Packer.toBlob(doc);
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const cleanName = (data.businessName || 'MLOT_Report').replace(/[^a-z0-9]/gi, '_');
-      link.download = `${cleanName}_Analysis.doc`;
-      
+      link.download = `${cleanName}_Analysis.docx`;
       document.body.appendChild(link);
       link.click();
-      
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
@@ -168,6 +139,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
       setIsDownloading(false);
     }
   };
+
+  const handlePrintFromDashboard = () => {
+    // Open the report preview, then print the report (not the dashboard).
+    setPrintOnOpen(true);
+    setIsReportModalOpen(true);
+  };
+
+  useEffect(() => {
+    if (printOnOpen && isReportModalOpen) {
+      setPrintOnOpen(false);
+      const t = window.setTimeout(() => window.print(), 400);
+      return () => window.clearTimeout(t);
+    }
+  }, [printOnOpen, isReportModalOpen]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -197,6 +182,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
              >
                <FileText className="w-4 h-4" />
                View Full Report
+             </button>
+             <button
+               onClick={handlePrintFromDashboard}
+               className="flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 px-4 py-2 rounded-lg transition-colors border border-slate-700"
+             >
+               <Printer className="w-4 h-4" />
+               Print
              </button>
              <button 
                onClick={onRestart}
@@ -398,7 +390,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                      Print Report
                    </button>
                    <button 
-                     onClick={handleDownloadWord}
+                     onClick={handleDownloadDocx}
                      disabled={isDownloading}
                      className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded-lg transition-colors font-medium disabled:opacity-70 shadow-lg shadow-blue-900/20"
                    >
@@ -421,7 +413,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
               id="printable-report-content" 
               className="bg-white text-black shadow-2xl mt-24 mb-20 mx-auto"
               style={{ 
-                width: '8.5in', // Visual match for US Letter/A4
+                width: 'min(8.5in, 100%)', // Letter width on desktop/print, fluid on small screens
                 minHeight: '11in',
                 padding: '0.75in', 
                 boxSizing: 'border-box',
