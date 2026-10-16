@@ -6,6 +6,7 @@ import { DeSoAuth } from './components/DeSoAuth';
 import { GoogleAuth } from './components/GoogleAuth';
 import { SupportButton } from './components/SupportButton';
 import { useGoogleUser } from './services/googleAuth';
+import { pingUse } from './services/usagePing';
 import { AnalysisResult } from './types';
 import { Activity, DollarSign, ChevronRight, FileText } from 'lucide-react';
 
@@ -32,6 +33,7 @@ export default function App() {
   };
 
   const handleAnalysisComplete = (data: AnalysisResult) => {
+    pingUse('analysis_completed');
     setAnalysisData(data);
     setCurrentState(AppState.RESULTS);
   };
