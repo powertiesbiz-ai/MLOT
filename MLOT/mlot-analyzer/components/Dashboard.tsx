@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableCell, TableRow, WidthType } from 'docx';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, Table, TableCell, TableRow, WidthType, ShadingType, BorderStyle } from 'docx';
 import { AnalysisResult, LeakageCategory, Recommendation, BusinessSnapshot, LeadScoringAnalysis } from '../types';
 import { LeakageChart } from './LeakageChart';
-import { RefreshCw, AlertTriangle, Users, Briefcase, DollarSign, ShoppingCart, Activity, Target, Cpu, Zap, Loader2, MessageSquare, FileText, X, FileEdit, Printer } from 'lucide-react';
+import { RefreshCw, AlertTriangle, Users, Briefcase, DollarSign, ShoppingCart, Activity, Target, Cpu, Zap, Loader2, MessageSquare, FileText, X, FileEdit, Printer, BookOpen } from 'lucide-react';
 
 interface DashboardProps {
   data: AnalysisResult;
@@ -32,6 +32,25 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
       const H = (text: string) =>
         new Paragraph({ heading: HeadingLevel.HEADING_1, spacing: { before: 320, after: 160 }, children: [new TextRun({ text, bold: true })] });
 
+      // Plain-language callout: shaded single-cell box with a bold label.
+      const callout = (label: string, text: string) =>
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: {
+            top: { style: BorderStyle.SINGLE, size: 6, color: '888888' },
+            bottom: { style: BorderStyle.SINGLE, size: 6, color: '888888' },
+            left: { style: BorderStyle.SINGLE, size: 6, color: '888888' },
+            right: { style: BorderStyle.SINGLE, size: 6, color: '888888' },
+          },
+          rows: [new TableRow({ children: [new TableCell({
+            shading: { type: ShadingType.CLEAR, color: 'auto', fill: 'F4F1EA' },
+            children: [new Paragraph({ spacing: { after: 0 }, children: [
+              new TextRun({ text: `${label}  `, bold: true, size: 20 }),
+              new TextRun({ text, size: 21 }),
+            ] })],
+          })] })],
+        });
+
       const children: (Paragraph | Table)[] = [];
 
       // Cover
@@ -39,16 +58,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
       children.push(P(data.businessName || "Your Business", { bold: true, size: 14, alignment: AlignmentType.CENTER }));
       children.push(P(`Generated on ${dateStr}`, { italic: true, size: 10, alignment: AlignmentType.CENTER, spacingAfter: 320 }));
 
+      // Plain-language layer: Short Version, roadmap, plan at a glance, glossary
+      children.push(H("The Short Version — The Whole Report in 30 Seconds"));
+      shortVersion.forEach(line => children.push(P(`\u25B8 ${line}`, { spacingAfter: 80 })));
+      children.push(H("How to Read This Report"));
+      roadmap.forEach(([name, line]) => children.push(P(`${name} — ${line}.`, { spacingAfter: 60 })));
+      children.push(P("In a hurry? Read the Short Version, the Bottom Line under the total, and the Strategic Action Plan checklist.", { italic: true, spacingAfter: 200 }));
+      children.push(H("The Plan at a Glance"));
+      children.push(P(flowSteps.map((s, i) => `${i + 1}. ${s}`).join('  \u2192  '), { spacingAfter: 200 }));
+      children.push(H("Words We Use"));
+      glossary.forEach(([term, def]) => children.push(P(`${term} — ${def}`, { spacingAfter: 60 })));
+
       // Executive summary
       children.push(H("Executive Summary"));
       children.push(P(data.executiveSummary || "", { spacingAfter: 240 }));
       children.push(P("Top Strategic Priorities:", { bold: true, spacingAfter: 120 }));
       (data.topPriorities || []).forEach((pr, i) => children.push(P(`${i + 1}. ${pr}`, { spacingAfter: 80 })));
+      children.push(callout("IN PLAIN TERMS", inPlainTerms));
 
       // Total leakage callout
       children.push(H("Total Annual Leakage Identified"));
       children.push(P(formatCurrency(data.totalLeakage), { bold: true, size: 28, alignment: AlignmentType.CENTER }));
       children.push(P("Money currently left on the table", { alignment: AlignmentType.CENTER, spacingAfter: 320 }));
+      children.push(callout("THE BOTTOM LINE", bottomLine));
 
       // Business snapshot
       if (data.businessSnapshot) {
@@ -67,8 +99,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
 
       // Leakage breakdown
       children.push(H("Financial Leakage Breakdown"));
+      children.push(callout("\u26A0 WATCH OUT", watchOut));
+      const headerShade = { type: ShadingType.CLEAR, color: 'auto', fill: 'E3DFD5' } as const;
+      const totalShade = { type: ShadingType.CLEAR, color: 'auto', fill: 'F4F1EA' } as const;
       const headerRow = new TableRow({ children: ["Category", "Analysis", "Est. Loss"].map(t =>
-        new TableCell({ children: [P(t, { bold: true, size: 10, spacingAfter: 0 })] })) });
+        new TableCell({ shading: headerShade, children: [P(t, { bold: true, size: 10, spacingAfter: 0 })] })) });
       const leakRows = (data.leakageBreakdown || []).map(item => {
         const analysis = item.evidence ? `${item.description}\nFrom the interview: ${item.evidence}` : item.description;
         return new TableRow({ children: [
@@ -77,7 +112,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
           new TableCell({ children: [P(formatCurrency(item.estimatedLeakage), { bold: true, size: 10, spacingAfter: 0 })] }),
         ]});
       });
-      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...leakRows] }));
+      const totalRow = new TableRow({ children: [
+        new TableCell({ shading: totalShade, children: [P("Total", { bold: true, size: 10, spacingAfter: 0 })] }),
+        new TableCell({ shading: totalShade, children: [P("", { spacingAfter: 0 })] }),
+        new TableCell({ shading: totalShade, children: [P(formatCurrency(data.totalLeakage), { bold: true, size: 10, spacingAfter: 0 })] }),
+      ]});
+      children.push(new Table({ width: { size: 100, type: WidthType.PERCENTAGE }, rows: [headerRow, ...leakRows, totalRow] }));
+      if (remember) children.push(callout("\u2605 REMEMBER", remember));
 
       // Lead scoring
       if (data.leadScoringAnalysis) {
@@ -102,7 +143,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
         if (!items.length) return;
         children.push(P(title, { bold: true, size: 12, spacingAfter: 80 }));
         items.forEach(rec => {
-          children.push(P(`${rec.title} [${rec.type}]`, { bold: true, size: 10, spacingAfter: 40 }));
+          children.push(P(`\u2610 ${rec.title} [${rec.type}]`, { bold: true, size: 10, spacingAfter: 40 }));
           children.push(P(rec.description, { size: 10, spacingAfter: 160 }));
         });
       });
@@ -164,6 +205,69 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
 
   const maxLeakage = Math.max(...(data.leakageBreakdown?.map(i => i.estimatedLeakage) || [0]), 1);
 
+  // ── Plain-language layer ─────────────────────────────────────────────
+  // Presentation furniture only (Short Version, roadmap, callouts, bottom
+  // line, checklist). Every string below is derived from this report's own
+  // data — no new findings, figures, or claims are introduced.
+  const leaks = data.leakageBreakdown || [];
+  const topLeak = [...leaks].sort((a, b) => b.estimatedLeakage - a.estimatedLeakage)[0];
+  const perMonth = data.totalLeakage / 12;
+  const perWeek = data.totalLeakage / 52;
+  const recGroupsAll: [string, Recommendation[]][] = [
+    ['Leadership & Culture', data.recommendations?.leadership || []],
+    ['Process', data.recommendations?.process || []],
+    ['Marketing & Sales', data.recommendations?.marketing || []],
+    ['Collections & Revenue', data.recommendations?.collections || []],
+  ];
+  const recCount = recGroupsAll.reduce((n, [, items]) => n + items.length, 0);
+  const hasBiab = recGroupsAll.some(([, items]) => items.some(r => r.type === 'BIAB'));
+
+  const shortVersion: string[] = [
+    `An estimated ${formatCurrency(data.totalLeakage)} a year is leaking out of the business${leaks.length ? ` across ${leaks.length} area${leaks.length === 1 ? '' : 's'}` : ''}.`,
+  ];
+  if (topLeak) shortVersion.push(`${topLeak.category} is the biggest single leak, at ${formatCurrency(topLeak.estimatedLeakage)} a year.`);
+  if (data.topPriorities?.[0]) shortVersion.push(`First thing to fix: ${data.topPriorities[0]}`);
+  if (data.leadScoringAnalysis) shortVersion.push(`The proposed lead-scoring model carries a potential conversion uplift of ${data.leadScoringAnalysis.potentialConversionIncrease}.`);
+  if (recCount) {
+    const names = recGroupsAll.filter(([, items]) => items.length).map(([name]) => name.toLowerCase());
+    shortVersion.push(`The action plan lists ${recCount} recommended action${recCount === 1 ? '' : 's'} across ${names.join(', ')}.`);
+  }
+
+  const roadmap: [string, string][] = [
+    ['The Short Version', 'the whole report in 30 seconds'],
+    ['Executive Summary', 'what the analysis found, and the priorities it points to'],
+    ['The Money', 'the total left on the table, and what it means per month'],
+    ...(data.businessSnapshot ? [['Business Snapshot', 'the facts about the business this report is based on']] as [string, string][] : []),
+    ['Where the Money Leaks', 'each leak, its yearly cost, and the interview answers behind it'],
+    ...(data.leadScoringAnalysis ? [['AI Lead Scoring Plan', 'how to rank new leads so the best ones get called first']] as [string, string][] : []),
+    ['Strategic Action Plan', 'what to do about it — a checklist you can tick off'],
+    ...(data.transcript && data.transcript.length > 0 ? [['Interview Transcript', 'every question and answer behind this report']] as [string, string][] : []),
+  ];
+
+  const flowSteps = ['Your interview answers', 'The leaks they point to', 'What each leak costs', 'The fix-it plan', 'Your first step'];
+
+  const glossary: [string, string][] = [
+    ['Leakage', 'money the business could have kept, lost through gaps in follow-up, process, or pricing.'],
+    ['Estimate', 'a figure worked out from the answers given in the interview — not taken from the business\u2019s accounts.'],
+    ...(data.leadScoringAnalysis ? [
+      ['Lead scoring', 'ranking new enquiries so the ones most likely to buy get attention first.'],
+      ['Conversion rate', 'out of every 100 enquiries, how many become paying customers.'],
+    ] as [string, string][] : []),
+    ...(hasBiab ? [['BIAB (Business In A Box)', 'a packaged, ready-to-use system, offered in some recommendations.']] as [string, string][] : []),
+  ];
+
+  const inPlainTerms = topLeak
+    ? `Add up the leaks below and the total is ${formatCurrency(data.totalLeakage)} a year — about ${formatCurrency(perMonth)} a month. The biggest single piece is ${topLeak.category}, at ${formatCurrency(topLeak.estimatedLeakage)} a year.`
+    : `The total identified below is ${formatCurrency(data.totalLeakage)} a year — about ${formatCurrency(perMonth)} a month.`;
+
+  const bottomLine = `${formatCurrency(data.totalLeakage)} a year works out to about ${formatCurrency(perMonth)} a month, or ${formatCurrency(perWeek)} a week. Every month these leaks stay open, roughly another ${formatCurrency(perMonth)} slips away.`;
+
+  const watchOut = 'Every figure in this report is an estimate, worked out from the answers given in the diagnostic interview. Use the numbers to decide where to look first — they are not taken from the business\u2019s bookkeeping, and the real figures may be higher or lower.';
+
+  const remember = topLeak && data.totalLeakage > 0
+    ? `One leak is bigger than the rest: ${topLeak.category}, at ${formatCurrency(topLeak.estimatedLeakage)} a year — ${Math.round((topLeak.estimatedLeakage / data.totalLeakage) * 100)}% of the total, and marked ${topLeak.priority} priority in the table.`
+    : '';
+
   return (
     <div className="bg-slate-900 min-h-screen pb-20 relative overflow-x-hidden">
       {/* Web View Content */}
@@ -200,6 +304,31 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
            </div>
         </div>
 
+        {/* The Short Version — plain-language layer */}
+        <div className="bg-slate-800 rounded-2xl p-6 border border-slate-700 border-l-4 border-l-[#C9A227] shadow-xl">
+          <div className="flex items-center gap-2 text-[#D4AF37] mb-1">
+            <BookOpen className="w-5 h-5" />
+            <h3 className="text-lg font-bold tracking-wide uppercase">The Short Version</h3>
+          </div>
+          <p className="text-slate-500 text-sm mb-4">The whole report in 30 seconds.</p>
+          <ul className="space-y-2">
+            {shortVersion.map((line, i) => (
+              <li key={i} className="flex items-start gap-2 text-slate-200 leading-relaxed">
+                <span className="text-[#D4AF37] mt-0.5 flex-shrink-0">▸</span>
+                <span>{line}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-slate-500 text-sm mt-5">
+            <span className="font-semibold text-slate-400">What this report covers: </span>
+            {roadmap.map(([name]) => name).join(' · ')}
+          </p>
+          <div className="mt-4 pt-4 border-t border-slate-700">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] block mb-1">The Bottom Line</span>
+            <p className="text-slate-200 leading-relaxed">{bottomLine}</p>
+          </div>
+        </div>
+
         {/* Business Snapshot Section */}
         {data.businessSnapshot && (
           <div className="bg-slate-800/80 rounded-2xl p-6 border border-slate-700 shadow-lg backdrop-blur-sm">
@@ -225,6 +354,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
             <p className="text-slate-300 leading-relaxed text-lg">
               {data.executiveSummary}
             </p>
+            <div className="mt-6 bg-slate-900/50 border border-slate-700/60 rounded-lg p-4">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#D4AF37] block mb-1">In Plain Terms</span>
+              <p className="text-slate-300 leading-relaxed">{inPlainTerms}</p>
+            </div>
             <div className="mt-6">
               <h4 className="text-sm font-uppercase tracking-wider text-slate-500 mb-3">TOP PRIORITIES</h4>
               <ol className="space-y-2">
@@ -429,6 +562,54 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                 <p style={{ fontSize: '10pt', color: '#000000', margin: '10px 0 0 0', fontStyle: 'italic', backgroundColor: '#ffffff' }}>Generated on {new Date().toLocaleDateString()}</p>
               </div>
 
+              {/* The Short Version — plain-language layer */}
+              <div style={{ marginBottom: '30px', border: '2px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '11pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '4px', backgroundColor: '#ffffff' }}>The Short Version</span>
+                <span style={{ fontSize: '9pt', fontStyle: 'italic', color: '#000000', display: 'block', marginBottom: '10px', backgroundColor: '#ffffff' }}>The whole report in 30 seconds.</span>
+                {shortVersion.map((line, i) => (
+                  <div key={i} style={{ fontSize: '10.5pt', lineHeight: 1.5, color: '#000000', marginBottom: i === shortVersion.length - 1 ? 0 : '6px', backgroundColor: '#ffffff' }}>▸ {line}</div>
+                ))}
+              </div>
+
+              {/* How to Read This Report — plain-language layer */}
+              <div style={{ marginBottom: '30px', border: '1px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '10pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '10px', backgroundColor: '#ffffff' }}>How to Read This Report</span>
+                {roadmap.map(([name, line], i) => (
+                  <div key={i} style={{ fontSize: '10pt', lineHeight: 1.5, color: '#000000', marginBottom: '4px', backgroundColor: '#ffffff' }}><strong>{name}</strong> — {line}.</div>
+                ))}
+                <div style={{ fontSize: '10pt', fontStyle: 'italic', color: '#000000', marginTop: '8px', backgroundColor: '#ffffff' }}>In a hurry? Read the Short Version, the Bottom Line under the total, and the Strategic Action Plan checklist.</div>
+              </div>
+
+              {/* The Plan at a Glance — plain-language layer */}
+              <div style={{ marginBottom: '30px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '10pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '8px', backgroundColor: '#ffffff' }}>The Plan at a Glance</span>
+                <table style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#ffffff' }}>
+                  <tbody>
+                    <tr style={{ backgroundColor: '#ffffff' }}>
+                      {flowSteps.map((step, i) => (
+                        <React.Fragment key={i}>
+                          <td style={{ width: '18%', border: '1px solid #000000', padding: '8px 6px', textAlign: 'center', verticalAlign: 'top', color: '#000000', backgroundColor: '#ffffff' }}>
+                            <div style={{ fontSize: '14pt', fontWeight: 'bold', lineHeight: 1, color: '#000000', backgroundColor: '#ffffff' }}>{i + 1}</div>
+                            <div style={{ fontSize: '8.5pt', lineHeight: 1.3, marginTop: '4px', color: '#000000', backgroundColor: '#ffffff' }}>{step}</div>
+                          </td>
+                          {i < flowSteps.length - 1 && (
+                            <td style={{ width: '2.5%', textAlign: 'center', verticalAlign: 'middle', fontSize: '12pt', color: '#000000', backgroundColor: '#ffffff' }}>→</td>
+                          )}
+                        </React.Fragment>
+                      ))}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Words We Use — plain-language layer */}
+              <div style={{ marginBottom: '40px', border: '1px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '10pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '10px', backgroundColor: '#ffffff' }}>Words We Use</span>
+                {glossary.map(([term, def], i) => (
+                  <div key={i} style={{ fontSize: '10pt', lineHeight: 1.5, color: '#000000', marginBottom: i === glossary.length - 1 ? 0 : '4px', backgroundColor: '#ffffff' }}><strong>{term}</strong> — {def}</div>
+                ))}
+              </div>
+
               {/* Executive Summary */}
               <div style={{ marginBottom: '40px', backgroundColor: '#ffffff' }}>
                 <h2 style={{ fontSize: '14pt', fontWeight: 'bold', color: '#000000', borderBottom: '1px solid #000000', paddingBottom: '5px', marginBottom: '15px', textTransform: 'uppercase', backgroundColor: '#ffffff' }}>Executive Summary</h2>
@@ -456,11 +637,23 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                 </div>
               </div>
 
+              {/* In Plain Terms — plain-language layer */}
+              <div style={{ marginBottom: '40px', border: '1px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '9pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '6px', backgroundColor: '#ffffff' }}>In Plain Terms</span>
+                <p style={{ fontSize: '11pt', lineHeight: '1.5', color: '#000000', margin: '0', backgroundColor: '#ffffff' }}>{inPlainTerms}</p>
+              </div>
+
               {/* Total Leakage Callout */}
               <div style={{ marginBottom: '40px', borderTop: '1px solid #000000', borderBottom: '1px solid #000000', padding: '30px', textAlign: 'center', backgroundColor: '#ffffff' }}>
                 <h2 style={{ fontSize: '12pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', margin: '0 0 10px 0', border: 'none', backgroundColor: '#ffffff' }}>Total Annual Leakage Identified</h2>
                 <div style={{ fontSize: '36pt', fontWeight: '900', color: '#000000', margin: '15px 0', backgroundColor: '#ffffff' }}>{formatCurrency(data.totalLeakage)}</div>
                 <p style={{ fontSize: '10pt', color: '#000000', margin: '0', backgroundColor: '#ffffff' }}>Money currently left on the table</p>
+              </div>
+
+              {/* The Bottom Line — plain-language layer */}
+              <div style={{ marginBottom: '40px', border: '2px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
+                <span style={{ fontSize: '9pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '6px', backgroundColor: '#ffffff' }}>The Bottom Line</span>
+                <p style={{ fontSize: '11pt', lineHeight: '1.5', color: '#000000', margin: '0', backgroundColor: '#ffffff' }}>{bottomLine}</p>
               </div>
 
               {/* Business Snapshot */}
@@ -504,6 +697,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
               {/* Leakage Breakdown Table */}
               <div style={{ marginBottom: '40px', backgroundColor: '#ffffff' }}>
                 <h2 style={{ fontSize: '14pt', fontWeight: 'bold', color: '#000000', borderBottom: '1px solid #000000', paddingBottom: '5px', marginBottom: '15px', textTransform: 'uppercase', backgroundColor: '#ffffff' }}>Financial Leakage Breakdown</h2>
+                <p style={{ fontSize: '10pt', lineHeight: '1.5', color: '#000000', marginBottom: '12px', backgroundColor: '#ffffff' }}><strong>⚠ Watch Out —</strong> {watchOut}</p>
                 <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #000000', backgroundColor: '#ffffff' }}>
                   <thead>
                     <tr style={{ borderBottom: '1px solid #000000', backgroundColor: '#ffffff' }}>
@@ -532,9 +726,22 @@ export const Dashboard: React.FC<DashboardProps> = ({ data, onRestart }) => {
                         <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#000000', fontSize: '10pt', verticalAlign: 'top', backgroundColor: '#ffffff' }}>{formatCurrency(item.estimatedLeakage)}</td>
                       </tr>
                     ))}
+                    <tr style={{ borderTop: '2px solid #000000', backgroundColor: '#ffffff' }}>
+                      <td style={{ padding: '8px', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', fontSize: '10pt', borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}>Total</td>
+                      <td style={{ padding: '8px', color: '#000000', borderRight: '1px solid #000000', backgroundColor: '#ffffff' }}></td>
+                      <td style={{ padding: '8px', textAlign: 'right', fontWeight: 'bold', color: '#000000', fontSize: '10pt', backgroundColor: '#ffffff' }}>{formatCurrency(data.totalLeakage)}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>
+
+              {/* Remember — plain-language layer */}
+              {remember && (
+                <div style={{ marginBottom: '40px', border: '1px solid #000000', padding: '15px', backgroundColor: '#ffffff' }}>
+                  <span style={{ fontSize: '9pt', fontWeight: 'bold', color: '#000000', textTransform: 'uppercase', display: 'block', marginBottom: '6px', backgroundColor: '#ffffff' }}>★ Remember</span>
+                  <p style={{ fontSize: '10.5pt', lineHeight: '1.5', color: '#000000', margin: '0', backgroundColor: '#ffffff' }}>{remember}</p>
+                </div>
+              )}
 
               {/* Lead Scoring Section */}
               {data.leadScoringAnalysis && (
@@ -630,7 +837,7 @@ const RecommendationCard: React.FC<{ title: string, items: Recommendation[] }> =
       {items.map((rec, idx) => (
         <li key={idx} className="bg-slate-900/50 rounded-lg p-4 border border-slate-700/50">
           <div className="flex justify-between items-start mb-1">
-            <span className="font-semibold text-emerald-400">{rec.title}</span>
+            <span className="font-semibold text-emerald-400"><span className="text-slate-500 mr-1.5">☐</span>{rec.title}</span>
             <span className="text-xs font-bold uppercase px-2 py-0.5 rounded bg-slate-700 text-slate-300">
               {rec.type}
             </span>
@@ -651,7 +858,7 @@ const PrintSection: React.FC<{ title: string, items: Recommendation[] }> = ({ ti
           <table style={{ width: '100%', marginBottom: '4px', backgroundColor: '#ffffff' }}>
             <tbody>
               <tr style={{ backgroundColor: '#ffffff' }}>
-                <td style={{ fontWeight: 'bold', color: '#000000', fontSize: '10pt', border: 'none', padding: 0, backgroundColor: '#ffffff' }}>{rec.title}</td>
+                <td style={{ fontWeight: 'bold', color: '#000000', fontSize: '10pt', border: 'none', padding: 0, backgroundColor: '#ffffff' }}>☐ {rec.title}</td>
                 <td style={{ textAlign: 'right', width: '100px', border: 'none', padding: 0, backgroundColor: '#ffffff' }}>
                    <span style={{ fontSize: '8pt', color: '#000000', border: '1px solid #000000', padding: '2px 6px', textTransform: 'uppercase', backgroundColor: '#ffffff' }}>
                      {rec.type}

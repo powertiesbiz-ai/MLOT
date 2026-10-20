@@ -5,6 +5,8 @@ import {
   INITIAL_GREETING,
 } from "../constants";
 import { AnalysisResult } from "../types";
+import { normalizeReportTotals } from "./reportTotals";
+import { reportDrift } from "./driftReport";
 
 /**
  * The Gemini API key is NOT in this bundle. All model calls go through the
@@ -228,27 +230,30 @@ const formatCurrency = (value: number): string =>
   }).format(value);
 
 // Force the report to be internally consistent so the dashboard, report modal,
-// and Word export all render the same figures:
-//  - each category's estimatedLeakage is coerced to a real number
-//  - totalLeakage becomes the exact sum of the category breakdown
+// and Word export all render the same figures. This is the single choke point
+// every generated report passes through, before any view sees it:
+//  - normalizeReportTotals (reportTotals.ts) checks the AI's stated total
+//    against the sum of its category breakdown; on real drift the total is
+//    corrected to the sum at the source, so no surface ever shows the drift
+//  - a corrected drift is reported to Keith by email (reportDrift —
+//    fire-and-forget, figures only, never report content or identity)
 //  - the executive summary ends by citing that same authoritative total
 const reconcileAnalysis = (report: AnalysisResult): AnalysisResult => {
-  const breakdown = Array.isArray(report.leakageBreakdown) ? report.leakageBreakdown : [];
-  breakdown.forEach((category) => {
-    if (category) category.estimatedLeakage = toNumber(category.estimatedLeakage);
-  });
+  const { report: normalized, drift } = normalizeReportTotals(report);
+  if (drift) reportDrift(drift);
 
-  const summed = breakdown.reduce((total, category) => total + (category?.estimatedLeakage || 0), 0);
-  report.leakageBreakdown = breakdown;
-  report.totalLeakage = summed > 0 ? summed : toNumber(report.totalLeakage);
+  // When the totals check abstained (unparseable figures), keep the prior
+  // display behavior: coerce the total to a plain number for formatting.
+  // (When the check ran, totalLeakage is already the exact numeric sum.)
+  normalized.totalLeakage = toNumber(normalized.totalLeakage);
 
-  const totalText = formatCurrency(report.totalLeakage);
-  const summary = (report.executiveSummary || "").trim();
-  report.executiveSummary = summary
+  const totalText = formatCurrency(normalized.totalLeakage);
+  const summary = (normalized.executiveSummary || "").trim();
+  normalized.executiveSummary = summary
     ? `${summary}${/[.!?]$/.test(summary) ? "" : "."} Across all categories, the total estimated annual leakage is ${totalText}.`
     : `The total estimated annual leakage across all categories is ${totalText}.`;
 
-  return report;
+  return normalized;
 };
 
 // Generate the final JSON report via the server-side proxy.
