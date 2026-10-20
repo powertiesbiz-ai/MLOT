@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { DeSoIdentityContext } from 'react-deso-protocol';
 import { ChatInterface } from './components/ChatInterface';
 import { Dashboard } from './components/Dashboard';
@@ -31,6 +31,30 @@ export default function App() {
     if (!isLoggedIn) return;
     setCurrentState(AppState.DIAGNOSTIC);
   };
+
+  // Website deep link: the "Take the assessment" button on powerties.us
+  // points at /?start=assessment. When that parameter is present, run the
+  // exact same start transition as the button above as soon as the user is
+  // logged in, instead of leaving them on the intro screen to find it.
+  // The parameter is consumed exactly once and stripped from the URL, so
+  // reloads, re-renders, and remounts never re-trigger it. Without the
+  // parameter, behavior is unchanged.
+  const deepLinkConsumed = useRef(false);
+  useEffect(() => {
+    if (deepLinkConsumed.current) return;
+    if (currentState !== AppState.INTRO || !isLoggedIn) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('start') !== 'assessment') return;
+    deepLinkConsumed.current = true;
+    params.delete('start');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      window.location.pathname + (query ? `?${query}` : '') + window.location.hash
+    );
+    handleStartDiagnostic();
+  }, [currentState, isLoggedIn]);
 
   const handleAnalysisComplete = (data: AnalysisResult) => {
     pingUse('analysis_completed');

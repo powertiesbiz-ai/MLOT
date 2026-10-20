@@ -25,9 +25,12 @@ type Status = 'idle' | 'sending' | 'success' | 'error';
  * report. It owns all of its own state - opening, closing, or failing to
  * send never touches the diagnostic flow.
  *
- * Collapsed it is just a small circle peeking from the right edge of the
- * screen (never covering the chat input or send button); tapping it expands
- * the donation panel.
+ * Collapsed it is a small pill docked on the right edge of the screen,
+ * labeled "Support" next to a heart icon so it reads as a support button
+ * (an unlabeled heart alone was mistaken for a glitch / "like" button). It
+ * never covers the chat input or send button; tapping it expands the
+ * donation panel. While the panel is open the trigger shrinks back to a
+ * small half-docked circle with an ✕, so it never overlaps the panel.
  */
 export const SupportButton: React.FC = () => {
   const { currentUser } = useContext(DeSoIdentityContext);
@@ -198,17 +201,30 @@ export const SupportButton: React.FC = () => {
         </div>
       )}
 
-      {/* Collapsed edge tab: a small circle half-docked on the right edge.
-          It never covers the chat input or send button; tapping expands the
-          donation panel. Slides out slightly on hover to hint it's tappable. */}
+      {/* Edge trigger, docked on the right edge at vertical center.
+          Collapsed: a labeled pill (heart icon + "Support") so visitors can
+          tell what it is. Open: shrinks to the small half-docked circle with
+          an ✕, exactly clearing the panel (which sits at right-16). It never
+          covers the chat input or send button. */}
       <button
         onClick={() => (open ? close() : (reset(), setOpen(true)))}
         aria-label={open ? 'Close support panel' : 'Support this app'}
-        className="fixed right-0 top-1/2 -translate-y-1/2 z-40 no-print w-12 h-12 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 shadow-lg backdrop-blur-sm transition-transform translate-x-1/2 hover:translate-x-[30%] flex items-center justify-center"
+        className={
+          open
+            ? 'fixed right-0 top-1/2 -translate-y-1/2 z-40 no-print w-12 h-12 rounded-full bg-slate-800/90 hover:bg-slate-700 border border-slate-700 shadow-lg backdrop-blur-sm transition-transform translate-x-1/2 hover:translate-x-[30%] flex items-center justify-center'
+            : 'fixed right-0 top-1/2 -translate-y-1/2 z-40 no-print h-11 pl-3 pr-4 rounded-l-full bg-slate-800/90 hover:bg-slate-700 border border-r-0 border-slate-700 shadow-lg backdrop-blur-sm flex items-center gap-1.5 text-sm font-medium text-slate-100 transition-colors'
+        }
       >
-        <span aria-hidden className="text-xl -ml-3">
-          {open ? '✕' : '💛'}
-        </span>
+        {open ? (
+          <span aria-hidden className="text-xl -ml-3">
+            ✕
+          </span>
+        ) : (
+          <>
+            <Heart className="w-4 h-4 text-yellow-400 flex-shrink-0" />
+            <span>Support</span>
+          </>
+        )}
       </button>
     </>
   );
